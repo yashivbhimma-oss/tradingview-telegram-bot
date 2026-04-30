@@ -1,0 +1,68 @@
+{
+  "_readme": {
+    "description": "TradingView → Telegram alert message templates.",
+    "how_to_add_a_template": [
+      "1. Add a new key at the top level (e.g. 'BTC_long').",
+      "2. Give it an 'emoji' field (optional but helpful).",
+      "3. Write your 'message' field using {{variable}} placeholders.",
+      "4. Any field sent in your TradingView JSON payload can be a {{variable}}.",
+      "5. Missing variables are replaced with an empty string — no crashes.",
+      "6. The 'default' template is used when no matching template is found.",
+      "7. Restart the server after editing this file (or it uses the cached version)."
+    ],
+    "supported_tradingview_built_in_variables": [
+      "{{close}}  — closing price of the current bar",
+      "{{open}}   — opening price",
+      "{{high}}   — bar high",
+      "{{low}}    — bar low",
+      "{{volume}} — bar volume",
+      "{{time}}   — bar open time (Unix timestamp)"
+    ],
+    "markdown_tips": [
+      "*bold text*   — wrap in single asterisks",
+      "_italic text_ — wrap in underscores",
+      "`code`        — wrap in backticks",
+      "\\n            — new line (use inside JSON strings)"
+    ]
+  },
+
+  "NQ_long": {
+    "emoji": "🟢",
+    "message": "🟢 *CONFIRMED — NQ LONG*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}` ({{risk}} pts risk)\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n⏱ Timeframe: {{timeframe}}\n✅ Daily: BULLISH | 4H: BULLISH\n\n📈 Confluence: {{confluence}}/3\n📝 Notes: {{notes}}"
+  },
+
+  "NQ_short": {
+    "emoji": "🔴",
+    "message": "🔴 *CONFIRMED — NQ SHORT*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}` ({{risk}} pts risk)\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n⏱ Timeframe: {{timeframe}}\n✅ Daily: BEARISH | 4H: BEARISH\n\n📈 Confluence: {{confluence}}/3\n📝 Notes: {{notes}}"
+  },
+
+  "ES_scalp": {
+    "emoji": "⚡",
+    "message": "⚡ *ES SCALP ALERT*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}`\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n📝 {{notes}}"
+  },
+
+  "ES_long": {
+    "emoji": "🟢",
+    "message": "🟢 *CONFIRMED — ES LONG*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}` ({{risk}} pts risk)\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n⏱ Timeframe: {{timeframe}}\n📝 Notes: {{notes}}"
+  },
+
+  "ES_short": {
+    "emoji": "🔴",
+    "message": "🔴 *CONFIRMED — ES SHORT*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}` ({{risk}} pts risk)\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n⏱ Timeframe: {{timeframe}}\n📝 Notes: {{notes}}"
+  },
+
+  "BTC_long": {
+    "emoji": "🟠",
+    "message": "🟠 *BTC LONG SIGNAL*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}`\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n📝 {{notes}}"
+  },
+
+  "BTC_short": {
+    "emoji": "🔵",
+    "message": "🔵 *BTC SHORT SIGNAL*\n\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}`\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*\n\n📝 {{notes}}"
+  },
+
+  "default": {
+    "emoji": "📊",
+    "message": "📊 *ALERT — {{symbol}}*\n\nDirection: {{direction}}\n📍 Entry: `{{entry}}`\n🛑 Stop: `{{stop}}`\n🎯 Target: `{{target}}`\n📊 R:R: *{{rr}}*"
+  }
+}
