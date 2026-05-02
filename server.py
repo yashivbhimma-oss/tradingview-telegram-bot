@@ -25,6 +25,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TradingView → Telegram Alert Bot")
 
+# Stores the latest market conditions received from the Market Conditions indicator
+latest_conditions = {
+    "trend": "—",
+    "strength": "—",
+    "momentum": "—",
+    "price_action": "—",
+    "bias": "—"
+}
+
 
 @app.get("/")
 async def health_check():
@@ -48,27 +57,56 @@ async def receive_alert(
 
         try:
             payload = json.loads(text)
+
+            # If this is a market conditions update — store it and return
+            if payload.get("type") == "conditions":
+                latest_conditions["trend"]        = payload.get("trend", "—")
+                latest_conditions["strength"]     = payload.get("strength", "—")
+                latest_conditions["momentum"]     = payload.get("momentum", "—")
+                latest_conditions["price_action"] = payload.get("price_action", "—")
+                latest_conditions["bias"]         = payload.get("bias", "—")
+                logger.info(f"Market conditions updated: {latest_conditions}")
+                return {"status": "ok", "updated": "conditions"}
+
+            # Otherwise it's a trade alert — render template
             formatted_message = render_template(payload)
-            symbol = payload.get("symbol", "")
-            interval = payload.get("interval", "")
+            symbol   = payload.get("symbol", "NQ1!")
+            interval = payload.get("interval", "1")
+
         except json.JSONDecodeError:
-            formatted_message = f"🔔 *RYZE ALERT*\n\n{text}"
-            symbol = ""
-            interval = ""
+            # Plain text Ryze alert — build message with stored market conditions
+            symbol   = "NQ1!"
+            interval = "1"
+            formatted_message = (
+                f"🔔 *RYZE ALERT*\n\n"
+                f"{text}\n\n"
+                f"📊 *Market Conditions:*\n"
+                f"Trend: {latest_conditions['trend']}  |  Strength: {latest_conditions['strength']}\n"
+                f"Momentum: {latest_conditions['momentum']}\n"
+                f"Price Action: {latest_conditions['price_action']}\n"
+                f"Overall Bias: {latest_conditions['bias']}"
+            )
 
     except Exception as e:
         logger.error(f"Failed to read body: {e}")
         raise HTTPException(status_code=400, detail="Could not read request body.")
 
-    logger.info(f"Message: {formatted_message}")
+    logger.info(f"Sending message: {formatted_message}")
 
-    chart_url = get_chart_image_url(symbol=symbol, interval=interval)
+    # Send 1m chart
+    chart_url_1m = get_chart_image_url(symbol=symbol, interval="1")
+    # Send 5m chart
+    chart_url_5m = get_chart_image_url(symbol=symbol, interval="5")
 
-    if chart_url:
-        success = await send_photo(image_url=chart_url, caption=formatted_message)
+    if chart_url_1m:
+        success = await send_photo(image_url=chart_url_1m, caption=formatted_message)
         if not success:
             await send_message(text=formatted_message)
     else:
         await send_message(text=formatted_message)
+
+    # Send 5m chart as a second photo (no caption)
+    if chart_url_5m:
+        await send_photo(image_url=chart_url_5m, caption="5m chart")
 
     return {"status": "ok"}
