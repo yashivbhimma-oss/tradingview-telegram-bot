@@ -3,6 +3,7 @@ server.py — Main FastAPI webhook server for TradingView → Telegram alerts.
 """
 
 import os
+import re
 import json
 import logging
 from fastapi import FastAPI, Request, HTTPException, Query
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TradingView → Telegram Alert Bot")
 
-# Stores the latest market conditions received from the Market Conditions indicator
+# Stores the latest market conditions
 latest_conditions = {
     "trend": "—",
     "strength": "—",
@@ -33,6 +34,28 @@ latest_conditions = {
     "price_action": "—",
     "bias": "—"
 }
+
+def extract_symbol_and_interval(text: str):
+    """
+    Try to extract symbol and interval from plain text Ryze alert.
+    Example: 'Bear RDM — NQ1!, 1m' → symbol='NQ1!', interval='1'
+    """
+    # Known symbols to look for
+    known_symbols = ["NQ1!", "ES1!", "MNQ1!", "MES1!", "BTCUSDT", "EURUSD"]
+    symbol = "NQ1!"  # default
+    interval = "1"   # default
+
+    for s in known_symbols:
+        if s in text:
+            symbol = s
+            break
+
+    # Try to extract interval — look for patterns like "1m", "5m", "15m", "30m"
+    match = re.search(r'(\d+)m', text.lower())
+    if match:
+        interval = match.group(1)
+
+    return symbol, interval
 
 
 @app.get("/")
@@ -58,7 +81,7 @@ async def receive_alert(
         try:
             payload = json.loads(text)
 
-            # If this is a market conditions update — store it and return
+            # Market conditions update — store silently, no Telegram message
             if payload.get("type") == "conditions":
                 latest_conditions["trend"]        = payload.get("trend", "—")
                 latest_conditions["strength"]     = payload.get("strength", "—")
@@ -68,15 +91,14 @@ async def receive_alert(
                 logger.info(f"Market conditions updated: {latest_conditions}")
                 return {"status": "ok", "updated": "conditions"}
 
-            # Otherwise it's a trade alert — render template
+            # JSON trade alert
             formatted_message = render_template(payload)
             symbol   = payload.get("symbol", "NQ1!")
             interval = payload.get("interval", "1")
 
         except json.JSONDecodeError:
-            # Plain text Ryze alert — build message with stored market conditions
-            symbol   = "NQ1!"
-            interval = "1"
+            # Plain text Ryze alert
+            symbol, interval = extract_symbol_and_interval(text)
             formatted_message = (
                 f"🔔 *RYZE ALERT*\n\n"
                 f"{text}\n\n"
@@ -91,22 +113,16 @@ async def receive_alert(
         logger.error(f"Failed to read body: {e}")
         raise HTTPException(status_code=400, detail="Could not read request body.")
 
-    logger.info(f"Sending message: {formatted_message}")
+    logger.info(f"Symbol: {symbol} | Interval: {interval}")
 
-    # Send 1m chart
-    chart_url_1m = get_chart_image_url(symbol=symbol, interval="1")
-    # Send 5m chart
-    chart_url_5m = get_chart_image_url(symbol=symbol, interval="5")
-
-    if chart_url_1m:
-        success = await send_photo(image_url=chart_url_1m, caption=formatted_message)
+    # Send 1m chart screenshot
+    chart_url = get_chart_image_url(symbol=symbol, interval=interval)
+    if chart_url:
+        success = await send_photo(image_url=chart_url, caption=formatted_message)
         if not success:
+            logger.warning("Chart screenshot failed — sending text only.")
             await send_message(text=formatted_message)
     else:
         await send_message(text=formatted_message)
-
-    # Send 5m chart as a second photo (no caption)
-    if chart_url_5m:
-        await send_photo(image_url=chart_url_5m, caption="5m chart")
 
     return {"status": "ok"}
