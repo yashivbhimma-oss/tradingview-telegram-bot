@@ -1,15 +1,6 @@
-FROM python:3.12.13 AS builder
-
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+FROM python:3.12-slim
 WORKDIR /app
-
-
-RUN python -m venv .venv
 COPY requirements.txt ./
-RUN .venv/bin/pip install -r requirements.txt
-FROM python:3.12.13-slim
-WORKDIR /app
-COPY --from=builder /app/.venv .venv/
+RUN pip install -r requirements.txt
 COPY . .
-CMD ["/app/.venv/bin/fastapi", "run"]
+CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
