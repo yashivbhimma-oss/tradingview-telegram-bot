@@ -40,17 +40,15 @@ def extract_symbol_and_interval(text: str):
     Try to extract symbol and interval from plain text Ryze alert.
     Example: 'Bear RDM — NQ1!, 1m' → symbol='NQ1!', interval='1'
     """
-    # Known symbols to look for
     known_symbols = ["NQ1!", "ES1!", "MNQ1!", "MES1!", "BTCUSDT", "EURUSD"]
-    symbol = "NQ1!"  # default
-    interval = "1"   # default
+    symbol = "NQ1!"
+    interval = "1"
 
     for s in known_symbols:
         if s in text:
             symbol = s
             break
 
-    # Try to extract interval — look for patterns like "1m", "5m", "15m", "30m"
     match = re.search(r'(\d+)m', text.lower())
     if match:
         interval = match.group(1)
@@ -99,6 +97,7 @@ async def receive_alert(
         except json.JSONDecodeError:
             # Plain text Ryze alert
             symbol, interval = extract_symbol_and_interval(text)
+            chart_link = f"https://www.tradingview.com/chart/?symbol={symbol}"
             formatted_message = (
                 f"🔔 *RYZE ALERT*\n\n"
                 f"{text}\n\n"
@@ -106,7 +105,8 @@ async def receive_alert(
                 f"Trend: {latest_conditions['trend']}  |  Strength: {latest_conditions['strength']}\n"
                 f"Momentum: {latest_conditions['momentum']}\n"
                 f"Price Action: {latest_conditions['price_action']}\n"
-                f"Overall Bias: {latest_conditions['bias']}"
+                f"Overall Bias: {latest_conditions['bias']}\n\n"
+                f"📈 [Open Chart]({chart_link})"
             )
 
     except Exception as e:
@@ -115,14 +115,6 @@ async def receive_alert(
 
     logger.info(f"Symbol: {symbol} | Interval: {interval}")
 
-    # Send 1m chart screenshot
-    chart_url = get_chart_image_url(symbol=symbol, interval=interval)
-    if chart_url:
-        success = await send_photo(image_url=chart_url, caption=formatted_message)
-        if not success:
-            logger.warning("Chart screenshot failed — sending text only.")
-            await send_message(text=formatted_message)
-    else:
-        await send_message(text=formatted_message)
+    await send_message(text=formatted_message)
 
     return {"status": "ok"}
